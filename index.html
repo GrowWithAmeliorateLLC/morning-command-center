@@ -179,7 +179,7 @@ h1.setup-title { font-family: 'Montserrat', sans-serif; font-weight: 900; font-s
     <div class="divider"><div class="divider-line"></div><span class="divider-text">NOTION PRIORITY LIST</span><div class="divider-line"></div></div>
     <div class="field">
       <label>Notion Integration Token</label>
-      <input type="password" id="notionToken" placeholder="secret_xxxxxxxxxxxxxxxxxxxxxxxxxx" oninput="resetNotionStatus()" />
+      <input type="password" id="notionToken" placeholder="ntn_xxxxxxxxxxxxxxxxxxxxxxxxxx" oninput="resetNotionStatus()" />
       <p class="field-hint">Create an internal integration at <a href="https://www.notion.so/profile/integrations" target="_blank">notion.so/profile/integrations</a> — takes 2 min.<br>Then open your priority page → ⋯ → Connections → connect your integration.</p>
     </div>
     <div class="field">
@@ -380,6 +380,92 @@ async function startBriefing() {
   } catch(err) { console.error(err); showScreen('setup'); showErr(err.message || 'Something went wrong — check your API keys.'); }
 }
 
+/* ── TOOL SCHEMA — forces Claude to return structured JSON, bypassing all parse issues ── */
+const BRIEFING_TOOL = {
+  name: "deliver_briefing",
+  description: "Deliver the morning briefing data in structured format",
+  input_schema: {
+    type: "object",
+    properties: {
+      greeting: { type: "string", description: "Short energizing phrase, max 8 words, no emojis" },
+      focusBlock: { type: "string", description: "One concrete sentence about deep work focus today" },
+      insight: { type: "string", description: "One specific actionable observation, max 18 words" },
+      schedule: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            startTime: { type: "string" },
+            endTime: { type: "string" },
+            type: { type: "string", enum: ["deep","admin","break","event","flex"] },
+            label: { type: "string" },
+            note: { type: ["string","null"] }
+          },
+          required: ["startTime","endTime","type","label"]
+        }
+      },
+      startHere: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            text: { type: "string" },
+            why: { type: "string" },
+            source: { type: "string" },
+            list: { type: "string" },
+            cuId: { type: ["string","null"] },
+            notionIdx: { type: ["integer","null"] }
+          },
+          required: ["id","text","why","source","list"]
+        }
+      },
+      getItDone: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            text: { type: "string" },
+            source: { type: "string" },
+            list: { type: "string" },
+            cuId: { type: ["string","null"] },
+            notionIdx: { type: ["integer","null"] }
+          },
+          required: ["id","text","source","list"]
+        }
+      },
+      thisWeek: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            text: { type: "string" },
+            source: { type: "string" },
+            list: { type: "string" },
+            cuId: { type: ["string","null"] },
+            notionIdx: { type: ["integer","null"] }
+          },
+          required: ["id","text","source","list"]
+        }
+      },
+      watchLists: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            reason: { type: "string" }
+          },
+          required: ["name","reason"]
+        }
+      }
+    },
+    required: ["greeting","focusBlock","insight","schedule","startHere","getItDone","thisWeek"]
+  }
+};
+
 async function buildPlan(data, anthKey) {
   const prompt = `You are a morning briefing assistant for Amy, who runs Ameliorate (a boutique marketing automation agency). Amy has ADHD and needs extremely clear daily structure. Be direct, not fluffy.
 
@@ -387,9 +473,9 @@ Her current priority list (${data.priorityItems.length} items):
 ${data.priorityItems.map((x,i)=>`${i+1}. ${x}`).join('\n')}
 
 Today's family calendar events:
-${data.calEvents&&data.calEvents.length?data.calEvents.map(e=>`- ${e.time?e.time+' ':''}${e.name}`).join('\n'):'None pulled yet (calendar not connected)'}
+${data.calEvents&&data.calEvents.length?data.calEvents.map(e=>`- ${e.time?e.time+' ':''}${e.name}`).join('\n'):'None pulled yet'}
 
-ClickUp tasks (cuId = ClickUp task ID, include it in your response):
+ClickUp tasks assigned to her (include cuId in your response):
 OVERDUE: ${JSON.stringify(data.overdue.map(t=>({cuId:t.cuId,name:t.name,list:t.list})))}
 DUE TODAY: ${JSON.stringify(data.dueToday.map(t=>({cuId:t.cuId,name:t.name,list:t.list})))}
 UPCOMING: ${JSON.stringify(data.upcoming.map(t=>({cuId:t.cuId,name:t.name,list:t.list,status:t.status})))}
@@ -397,53 +483,44 @@ STALE (no update 7+ days): ${JSON.stringify(data.stale.map(t=>({cuId:t.cuId,name
 LISTS with no activity 7+ days: ${JSON.stringify(data.staleLists)}
 PENDING client lists: ${data.pendingLists&&data.pendingLists.length?JSON.stringify(data.pendingLists):'None found'}
 
-Return ONLY valid JSON — no markdown, no preamble:
-{
-  "greeting": "short energizing phrase max 8 words, no emojis, no exclamation marks",
-  "focusBlock": "one concrete sentence about deep work focus for today",
-  "insight": "one specific observation about workload or pattern, max 18 words, actionable",
-  "schedule": [
-    { "startTime": "08:00", "endTime": "10:00", "type": "deep", "label": "Top priority task name", "note": null }
-  ],
-  "startHere": [
-    { "id": "s1", "text": "clear action item", "why": "brief reason max 8 words", "source": "Notion | ClickUp", "list": "client or list name or empty", "cuId": null, "notionIdx": 0 }
-  ],
-  "getItDone": [
-    { "id": "g1", "text": "action item", "source": "Notion | ClickUp", "list": "client or list name", "cuId": null, "notionIdx": null }
-  ],
-  "thisWeek": [
-    { "id": "w1", "text": "action item", "source": "Notion | ClickUp", "list": "client or list name", "cuId": null, "notionIdx": null }
-  ],
-  "watchLists": [
-    { "name": "list or client name", "reason": "why it needs attention, max 10 words" }
-  ]
-}
+Call the deliver_briefing tool with Amy's morning plan.
 
 Rules:
-- schedule: 8am-8pm, 24hr time. Types: deep (teal), admin (seafoam), break (gray), event (purple), flex (buffer). Calendar events = type event at exact times. Amy: noon workout Mon, 8am Tue/Thu, 6am Fri. Walking pad midday. 4-7 blocks, longer uninterrupted for ADHD.
-- startHere: exactly 3 items — highest urgency
+- schedule: 8am-8pm, 24hr HH:MM. Types: deep=focused client work, admin=email/comms, break=lunch/gym/walking pad, event=calendar commitment at exact time, flex=buffer. Calendar events must appear as type event at their exact times. Amy: noon workout Mon, 8am Tue/Thu, 6am Fri. 4-7 blocks, longer uninterrupted for ADHD.
+- startHere: exactly 3 items — highest urgency, mix overdue ClickUp + top Notion priorities
 - getItDone: 4-6 items for a realistic workday
 - thisWeek: 3-5 items not today-critical
-- watchLists: stale + PENDING lists, max 5, omit if none
-- notionIdx: 0-based index from priority list above, null if not Notion
-- cuId: clickup task id, null if not ClickUp
-- NEVER surface: Youth Enrichment Franchises, Tools & Vendors, Explore lists
+- watchLists: stale + PENDING client lists, max 5, omit if none
+- notionIdx: 0-based index in priority list above (null if not from Notion)
+- cuId: ClickUp task id string (null if not from ClickUp)
+- NEVER surface tasks from: Youth Enrichment Franchises, Tools & Vendors, Explore lists
 - No filler, no congratulations`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': anthKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2000, system: "You are a JSON API. Return only valid parseable JSON. Escape internal double quotes as \\\". Never truncate. Always complete the full JSON response.", messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      tools: [BRIEFING_TOOL],
+      tool_choice: { type: "any" },
+      messages: [{ role: 'user', content: prompt }]
+    })
   });
+
   if (!res.ok) { const t = await res.text(); throw new Error('Claude API error ' + res.status + ': ' + t.slice(0,120)); }
   const d = await res.json();
-  const raw = d.content.map(b=>b.text||'').join('');
+
+  // Extract tool_use result — guaranteed valid JSON, no parsing needed
+  const toolBlock = d.content.find(b => b.type === 'tool_use');
+  if (toolBlock && toolBlock.input) return toolBlock.input;
+
+  // Fallback: try text parsing
+  const raw = d.content.filter(b=>b.type==='text').map(b=>b.text||'').join('');
   const clean = raw.replace(/```json|```/g,'').trim();
   try { return JSON.parse(clean); } catch {
-    const sanitized = clean.replace(/[\x00-\x1F\x7F]/g, c=>c==='\n'||c==='\r'||c==='\t'?c:'');
-    try { return JSON.parse(sanitized); } catch {}
-    const m = sanitized.match(/\{[\s\S]*\}/);
-    if (m) { try { return JSON.parse(m[0]); } catch(e2) { throw new Error('Could not parse AI response: ' + e2.message); } }
+    const m = clean.match(/\{[\s\S]*\}/);
+    if (m) return JSON.parse(m[0]);
     throw new Error('Could not parse AI response');
   }
 }
