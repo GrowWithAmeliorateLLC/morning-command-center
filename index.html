@@ -4,8 +4,554 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Morning Command Center — Ameliorate</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="https://storage.googleapis.com/msgsndr/duyQkjFepxRU10hrDn9s/media/68cdaf6b5f00dc30ea724bde.svg">
+<style>
+:root {
+  --lime: #b8dfbe;
+  --lime-d: #4a9570;
+  --lime-dd: #2d6b4e;
+  --seafoam: #b8dfbe;
+  --lavender: #f4edf7;
+  --ink: #0a0a0a;
+  --muted: #6e6e6e;
+  --card: #ffffff;
+  --border: rgba(0,0,0,0.09);
+  --border-strong: rgba(0,0,0,0.16);
+  --danger: #d94f3a;
+  --warn-bg: #fff8e6;
+  --warn-dot: #e8a000;
+  --success: #2e9e65;
+  --notion: #2383e2;
+  --notion-bg: #edf4fd;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--lavender); min-height: 100vh; color: var(--ink); -webkit-font-smoothing: antialiased; }
+.screen { display: none; }
+.screen.active { display: block; }
+.wordmark { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 13px; letter-spacing: 0.14em; color: var(--muted); display: flex; align-items: center; gap: 8px; margin-bottom: 2.5rem; }
+.wordmark-dot { width: 28px; height: 28px; background: none; border-radius: 0; }
+.wordmark-dot img { width: 100%; height: 100%; object-fit: contain; }
+.error-bar { background: #fdf0ee; border: 1.5px solid #f5c5be; padding: 11px 14px; border-radius: 9px; font-size: 13px; color: var(--danger); margin-bottom: 1rem; display: none; }
+.field { margin-bottom: 1.4rem; }
+label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin-bottom: 5px; }
+input[type="password"], input[type="text"], input[type="url"], textarea { width: 100%; padding: 11px 13px; border: 1.5px solid var(--border-strong); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; background: white; color: var(--ink); transition: border-color 0.18s; outline: none; }
+input:focus, textarea:focus { border-color: var(--lime-d); }
+textarea { resize: vertical; min-height: 90px; line-height: 1.65; }
+.field-hint { font-size: 12px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+.field-hint a { color: #7c4dff; text-decoration: none; }
+.field-hint a:hover { text-decoration: underline; }
+.btn-go { width: 100%; padding: 14px; background: var(--ink); color: var(--lime); border: none; border-radius: 10px; font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 13px; letter-spacing: 0.1em; cursor: pointer; transition: background 0.18s, transform 0.1s; }
+.btn-go:hover { background: #1f1f1f; }
+.btn-go:active { transform: scale(0.98); }
+.divider { display: flex; align-items: center; gap: 10px; margin: 1.4rem 0; }
+.divider-line { flex: 1; height: 1px; background: var(--border-strong); }
+.divider-text { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.06em; }
+.setup-wrap { max-width: 540px; margin: 0 auto; padding: 3.5rem 1.5rem 5rem; }
+h1.setup-title { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 2.2rem; line-height: 1.15; margin-bottom: 0.6rem; }
+.setup-sub { color: var(--muted); font-size: 15px; line-height: 1.65; margin-bottom: 2.5rem; }
+.notion-status { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 9px; font-size: 13px; font-weight: 500; margin-top: 7px; transition: all 0.2s; }
+.notion-status.idle { background: #f4f4f4; color: var(--muted); }
+.notion-status.loading { background: var(--notion-bg); color: var(--notion); }
+.notion-status.ok { background: #eaf5f0; color: var(--success); }
+.notion-status.fail { background: #fdf0ee; color: var(--danger); }
+.notion-pip { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.notion-status.loading .notion-pip { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.fallback-toggle { font-size: 12px; color: var(--notion); cursor: pointer; text-decoration: underline; margin-top: 6px; display: inline-block; }
+.fallback-area { display: none; margin-top: 10px; }
+.fallback-area.open { display: block; }
+.loading-wrap { max-width: 380px; margin: 0 auto; padding: 6rem 1.5rem; text-align: center; }
+.spinner { width: 44px; height: 44px; border: 3px solid var(--seafoam); border-top-color: var(--lime-d); border-radius: 50%; animation: spin 0.75s linear infinite; margin: 0 auto 1.8rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-title { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 1.1rem; margin-bottom: 0.4rem; }
+.loading-sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.steps { margin-top: 2rem; text-align: left; display: flex; flex-direction: column; gap: 2px; }
+.step { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; font-size: 13px; color: var(--muted); transition: background 0.2s; }
+.step.active { background: white; color: var(--ink); font-weight: 500; }
+.step.done { color: var(--success); }
+.step-pip { width: 7px; height: 7px; border-radius: 50%; background: #ccc; flex-shrink: 0; transition: background 0.2s; }
+.step.active .step-pip { background: var(--lime-d); }
+.step.done .step-pip { background: var(--success); }
+.dash-wrap { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+.dash-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.8rem; flex-wrap: wrap; gap: 1rem; }
+.dash-date { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+.dash-greeting { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 1.75rem; line-height: 1.15; }
+.top-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-sm { font-size: 12px; color: var(--muted); background: white; border: 1.5px solid var(--border-strong); padding: 7px 13px; border-radius: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: border-color 0.15s; white-space: nowrap; }
+.btn-sm:hover { border-color: #bbb; }
+.btn-sm.primary { background: var(--ink); color: var(--lime); border-color: var(--ink); }
+.btn-sm.primary:hover { background: #1f1f1f; border-color: #1f1f1f; }
+.bar { display: none; border-radius: 10px; padding: 12px 15px; margin-bottom: 10px; align-items: flex-start; gap: 10px; }
+.bar.visible { display: flex; }
+.bar-insight { background: var(--ink); color: white; }
+.bar-focus { background: var(--seafoam); color: var(--ink); }
+.bar-label { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 7px; border-radius: 4px; white-space: nowrap; margin-top: 1px; flex-shrink: 0; }
+.bar-insight .bar-label { background: var(--lime-d); color: #fff; }
+.bar-focus .bar-label { background: rgba(0,0,0,0.14); color: var(--ink); }
+.bar-body { font-size: 13.5px; line-height: 1.5; }
+.section { margin-bottom: 1.6rem; display: none; }
+.section.visible { display: block; }
+.section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.section-label { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.section-count { background: var(--ink); color: white; font-size: 10px; font-family: 'Montserrat', sans-serif; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+.task-card { background: white; border: 1.5px solid var(--border); border-radius: 11px; padding: 11px 13px; margin-bottom: 5px; display: flex; align-items: flex-start; gap: 11px; cursor: pointer; transition: border-color 0.15s, opacity 0.2s; user-select: none; }
+.task-card:hover { border-color: var(--border-strong); }
+.task-card.done { opacity: 0.38; }
+.task-card.done .task-text { text-decoration: line-through; }
+.section-start .task-card { border-color: var(--lime); }
+.section-start .task-card:hover { border-color: var(--lime-d); }
+.section-start .task-card.done { border-color: var(--border); }
+.cb { width: 19px; height: 19px; border: 2px solid #d0d0d0; border-radius: 5px; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; transition: background 0.15s, border-color 0.15s; }
+.task-card.done .cb { background: var(--lime-d); border-color: var(--lime-d); }
+.sync-badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; margin-left: 6px; display: none; }
+.sync-badge.syncing { display: inline-block; background: #fff3cd; color: #856404; }
+.sync-badge.synced { display: inline-block; background: #d4edda; color: #155724; }
+.sync-badge.failed { display: inline-block; background: #f8d7da; color: #721c24; }
+.cb svg { display: none; }
+.task-card.done .cb svg { display: block; }
+.task-body { flex: 1; min-width: 0; }
+.task-text { font-size: 14px; font-weight: 500; line-height: 1.4; margin-bottom: 4px; }
+.task-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; }
+.tag-cu { background: #eeebff; color: #6040cc; }
+.tag-notion { background: var(--notion-bg); color: var(--notion); }
+.tag-pr { background: #eaf5ee; color: var(--lime-dd); }
+.tag-client { background: #f0f0f0; color: #555; }
+.tag-why { font-size: 11px; color: var(--muted); font-style: italic; }
+.watch-card { background: var(--warn-bg); border: 1.5px solid rgba(232,160,0,0.25); border-radius: 10px; padding: 10px 13px; margin-bottom: 5px; display: flex; align-items: flex-start; gap: 10px; }
+.watch-pip { width: 7px; height: 7px; border-radius: 50%; background: var(--warn-dot); flex-shrink: 0; margin-top: 5px; }
+.watch-name { font-weight: 600; font-size: 13.5px; margin-bottom: 2px; }
+.watch-why { font-size: 12px; color: var(--muted); }
+.sync-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px; }
+.sync-info { font-size: 11px; color: var(--muted); }
+.sync-notion { color: var(--notion); font-weight: 600; }
+.cal-strip { display: none; margin-bottom: 1.1rem; }
+.cal-strip.visible { display: block; }
+.day-plan { background: var(--card); border: 1.5px solid var(--border); border-radius: 16px; padding: 1.2rem 1.4rem 1.4rem; margin-bottom: 1.1rem; display: none; }
+.day-plan.visible { display: block; }
+.day-plan-label { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
+.tblock-list { display: flex; flex-direction: column; gap: 6px; }
+.tblock { display: flex; align-items: stretch; gap: 10px; min-height: 54px; }
+.tblock-time { width: 74px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; font-size: 11px; font-weight: 600; color: var(--muted); line-height: 1.35; padding-top: 2px; }
+.tblock-time .tend { font-weight: 400; opacity: 0.65; font-size: 10px; }
+.tblock-bar { width: 4px; flex-shrink: 0; border-radius: 4px; }
+.tblock-body { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border); display: flex; flex-direction: column; justify-content: center; gap: 1px; background: white; }
+.tblock-chip { display: inline-block; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; padding: 2px 7px; border-radius: 20px; margin-bottom: 3px; width: fit-content; }
+.tblock-task { font-size: 13px; font-weight: 500; color: var(--ink); line-height: 1.35; }
+.tblock-note { font-size: 11px; color: var(--muted); line-height: 1.4; margin-top: 1px; }
+.tblock.type-deep .tblock-bar { background: #4a9570; }
+.tblock.type-deep .tblock-body { border-color: rgba(74,149,112,0.25); background: rgba(184,223,190,0.1); }
+.tblock.type-deep .tblock-chip { background: rgba(74,149,112,0.15); color: #2d6b4e; }
+.tblock.type-admin .tblock-bar { background: #6aad7a; }
+.tblock.type-admin .tblock-body { border-color: rgba(106,173,122,0.3); background: rgba(184,223,190,0.1); }
+.tblock.type-admin .tblock-chip { background: rgba(184,223,190,0.45); color: #2e6b3e; }
+.tblock.type-break .tblock-bar { background: #d0d0d0; }
+.tblock.type-break .tblock-body { border-color: #ececec; background: #fafafa; }
+.tblock.type-break .tblock-chip { background: #efefef; color: #999; }
+.tblock.type-event .tblock-bar { background: #9c6fc4; }
+.tblock.type-event .tblock-body { border-color: rgba(156,111,196,0.28); background: rgba(244,237,247,0.6); }
+.tblock.type-event .tblock-chip { background: rgba(156,111,196,0.15); color: #6b3fa0; }
+.tblock.type-flex .tblock-bar { background: #e0e0e0; }
+.tblock.type-flex .tblock-body { border-color: #ececec; background: white; }
+.tblock.type-flex .tblock-chip { background: #f2f2f2; color: #999; }
+</style>
 </head>
 <body>
-<p>Deploying...</p>
+
+<div id="screen-setup" class="screen active">
+  <div class="setup-wrap">
+    <div class="wordmark"><div class="wordmark-dot"><img src="https://storage.googleapis.com/msgsndr/duyQkjFepxRU10hrDn9s/media/68cdaf6b5f00dc30ea724bde.svg" alt="Ameliorate" /></div>AMELIORATE</div>
+    <h1 class="setup-title">Morning<br>Command Center</h1>
+    <p class="setup-sub">Connects to your Notion priority list and ClickUp — so you sit down knowing exactly where to start.</p>
+    <div id="error-bar" class="error-bar"></div>
+    <div class="divider"><div class="divider-line"></div><span class="divider-text">API KEYS</span><div class="divider-line"></div></div>
+    <div class="field">
+      <label>ClickUp Personal API Token</label>
+      <input type="password" id="cuKey" placeholder="pk_xxxxxxxxxxxxxxxxxxxxxxxx" />
+      <p class="field-hint">Settings → Apps → API Token at <a href="https://app.clickup.com/settings/apps" target="_blank">app.clickup.com/settings/apps</a></p>
+    </div>
+    <div class="field">
+      <label>Anthropic API Key</label>
+      <input type="password" id="anthKey" placeholder="sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxx" />
+      <p class="field-hint"><a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a> — costs fractions of a cent per briefing</p>
+    </div>
+    <div class="divider"><div class="divider-line"></div><span class="divider-text">NOTION PRIORITY LIST</span><div class="divider-line"></div></div>
+    <div class="field">
+      <label>Notion Integration Token</label>
+      <input type="password" id="notionToken" placeholder="secret_xxxxxxxxxxxxxxxxxxxxxxxxxx" oninput="resetNotionStatus()" />
+      <p class="field-hint">Create an internal integration at <a href="https://www.notion.so/profile/integrations" target="_blank">notion.so/profile/integrations</a> — takes 2 min.<br>Then open your priority page → ⋯ → Connections → connect your integration.</p>
+    </div>
+    <div class="field">
+      <label>Priority List Page URL or ID</label>
+      <input type="text" id="notionPage" placeholder="https://notion.so/your-page or paste page ID" oninput="resetNotionStatus()" />
+      <p class="field-hint">Open your priorities page in Notion, copy the URL, paste it here.</p>
+      <button type="button" onclick="testNotion()" style="margin-top:8px;padding:7px 14px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;background:var(--notion-bg);color:var(--notion);border:1.5px solid rgba(35,131,226,0.25);border-radius:7px;cursor:pointer;">Test Connection</button>
+      <div class="notion-status idle" id="notion-status"><div class="notion-pip"></div><span id="notion-status-text">Not tested yet</span></div>
+    </div>
+    <div style="margin-bottom:1.4rem;">
+      <span class="fallback-toggle" onclick="toggleFallback()">↳ No Notion? Paste your list manually instead</span>
+      <div class="fallback-area" id="fallback-area">
+        <label style="margin-top:8px;">Manual Priority List</label>
+        <textarea id="priorityList" placeholder="Paste items — one per line.&#10;&#10;Follow up Code Ninjas TX&#10;Finalize Mulligans July content"></textarea>
+      </div>
+    </div>
+    <div class="divider"><div class="divider-line"></div><span class="divider-text">FAMILY CALENDAR</span><div class="divider-line"></div></div>
+    <div class="field">
+      <label>Make Calendar Webhook URL <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aaa;">(optional)</span></label>
+      <input type="text" id="calWebhook" placeholder="https://hook.us1.make.com/xxxxxxxxxxxxxxxx" />
+      <p class="field-hint">Paste the webhook URL from your Make scenario here.</p>
+    </div>
+    <button class="btn-go" onclick="startBriefing()">BRIEF ME →</button>
+  </div>
+</div>
+
+<div id="screen-loading" class="screen">
+  <div class="loading-wrap">
+    <div class="wordmark" style="justify-content:center"><div class="wordmark-dot"><img src="https://storage.googleapis.com/msgsndr/duyQkjFepxRU10hrDn9s/media/68cdaf6b5f00dc30ea724bde.svg" alt="Ameliorate" /></div>AMELIORATE</div>
+    <div class="spinner"></div>
+    <p class="loading-title" id="load-title">Connecting…</p>
+    <p class="loading-sub" id="load-sub">One moment</p>
+    <div class="steps">
+      <div class="step active" id="step-no"><div class="step-pip"></div>Reading Notion priorities</div>
+      <div class="step" id="step-ca"><div class="step-pip"></div>Fetching family calendar</div>
+      <div class="step" id="step-cu"><div class="step-pip"></div>Fetching ClickUp tasks</div>
+      <div class="step" id="step-ai"><div class="step-pip"></div>Analyzing with Claude</div>
+      <div class="step" id="step-rd"><div class="step-pip"></div>Building your briefing</div>
+    </div>
+  </div>
+</div>
+
+<div id="screen-dashboard" class="screen">
+  <div class="dash-wrap">
+    <div class="dash-top">
+      <div><div class="dash-date" id="dash-date"></div><div class="dash-greeting" id="dash-greeting">Good morning.</div></div>
+      <div class="top-btns"><button class="btn-sm primary" onclick="startBriefing()">↻ Refresh</button><button class="btn-sm" onclick="resetToSetup()">Settings</button></div>
+    </div>
+    <div class="sync-row"><span class="sync-info" id="sync-info"></span></div>
+    <div class="day-plan" id="day-plan"><div class="day-plan-label">Today's Plan</div><div class="tblock-list" id="tblock-list"></div></div>
+    <div class="cal-strip" id="cal-strip"><div id="cal-events"></div></div>
+    <div class="bar bar-insight" id="bar-insight"><span class="bar-label">INSIGHT</span><span class="bar-body" id="insight-text"></span></div>
+    <div class="bar bar-focus" id="bar-focus"><span class="bar-label">PROTECT THIS BLOCK</span><span class="bar-body" id="focus-text"></span></div>
+    <div class="section section-start" id="sec-start"><div class="section-head"><span class="section-label">Start Here</span><span class="section-count" id="cnt-start"></span></div><div id="list-start"></div></div>
+    <div class="section" id="sec-today"><div class="section-head"><span class="section-label">Get It Done Today</span><span class="section-count" id="cnt-today"></span></div><div id="list-today"></div></div>
+    <div class="section" id="sec-week"><div class="section-head"><span class="section-label">This Week</span><span class="section-count" id="cnt-week"></span></div><div id="list-week"></div></div>
+    <div class="section" id="sec-watch"><div class="section-head"><span class="section-label">Needs Attention</span></div><div id="list-watch"></div></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let checked = {}, lastNotionItems = [], usingNotion = false;
+let notionBlockMap = {}, cuTaskIdMap = {}, activeCuKey = '', activeNotionToken = '';
+
+function showScreen(s) { document.querySelectorAll('.screen').forEach(el => el.classList.remove('active')); $('screen-' + s).classList.add('active'); }
+function showErr(msg) { const b = $('error-bar'); b.textContent = msg; b.style.display = 'block'; }
+function hideErr() { $('error-bar').style.display = 'none'; }
+function setStep(active) { ['no','ca','cu','ai','rd'].forEach((s,i) => { const el = $('step-'+s); if (!el) return; el.className='step'; const idx=['no','ca','cu','ai','rd'].indexOf(active); if(i<idx)el.classList.add('done'); else if(s===active)el.classList.add('active'); }); }
+function setLoad(title, sub) { $('load-title').textContent = title; $('load-sub').textContent = sub; }
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toggleFallback() { $('fallback-area').classList.toggle('open'); }
+function resetNotionStatus() { $('notion-status').className='notion-status idle'; $('notion-status-text').textContent='Not tested yet'; }
+
+function extractPageId(input) {
+  if (!input) return null;
+  input = input.trim();
+  const urlMatch = input.match(/([a-f0-9]{32})(?:[?#]|$)/i);
+  if (urlMatch) return urlMatch[1];
+  const dashed = input.replace(/-/g, '');
+  if (/^[a-f0-9]{32}$/i.test(dashed)) return dashed;
+  return null;
+}
+
+async function testNotion() {
+  const token = $('notionToken').value.trim(), pageRaw = $('notionPage').value.trim();
+  const pageId = extractPageId(pageRaw), el = $('notion-status'), txt = $('notion-status-text');
+  if (!token) { el.className='notion-status fail'; txt.textContent='Enter your integration token first.'; return; }
+  if (!pageId) { el.className='notion-status fail'; txt.textContent='Could not find a valid page ID in that URL.'; return; }
+  el.className='notion-status loading'; txt.textContent='Testing connection…';
+  try {
+    const items = await fetchNotionPage(token, pageId);
+    el.className='notion-status ok';
+    txt.textContent = items.length === 0 ? 'Connected — page is empty' : `Connected — found ${items.length} item${items.length!==1?'s':''}`;
+  } catch(e) { el.className='notion-status fail'; txt.textContent = e.message || 'Connection failed'; }
+}
+
+async function fetchNotionPage(token, pageId) {
+  const res = await fetch(`/.netlify/functions/notion-proxy?pageId=${encodeURIComponent(pageId)}&token=${encodeURIComponent(token)}`, { headers: { 'Content-Type': 'application/json' } });
+  if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.message || 'Notion API error ' + res.status + ' — make sure the page is connected to your integration'); }
+  const data = await res.json();
+  const items = []; notionBlockMap = {};
+  (data.results || []).forEach(block => {
+    const type = block.type, rich = block[type]?.rich_text;
+    if (!rich) return;
+    const text = rich.map(r => r.plain_text).join('').trim();
+    if (text) { items.push(text); notionBlockMap[text.toLowerCase().trim()] = block.id; }
+  });
+  return items;
+}
+
+async function cuFetch(path, key) {
+  const r = await fetch('https://api.clickup.com/api/v2' + path, { headers: { 'Authorization': key, 'Content-Type': 'application/json' } });
+  if (!r.ok) throw new Error('ClickUp ' + r.status + ': check your API token');
+  return r.json();
+}
+
+async function startBriefing() {
+  const cuKey = $('cuKey').value.trim(), anthKey = $('anthKey').value.trim();
+  const notionToken = $('notionToken').value.trim(), notionPageRaw = $('notionPage').value.trim();
+  const notionPageId = extractPageId(notionPageRaw), manualList = $('priorityList').value.trim();
+  const calWebhook = $('calWebhook').value.trim();
+  hideErr();
+  if (!cuKey) { showErr('Add your ClickUp API token.'); return; }
+  if (!anthKey) { showErr('Add your Anthropic API key.'); return; }
+  const hasNotion = notionToken && notionPageId, hasManual = manualList.length > 0;
+  if (!hasNotion && !hasManual) { showErr('Connect Notion or paste a manual priority list.'); return; }
+  try { localStorage.setItem('amc_cu',cuKey); localStorage.setItem('amc_anth',anthKey); if(notionToken)localStorage.setItem('amc_nt',notionToken); if(notionPageRaw)localStorage.setItem('amc_np',notionPageRaw); if(calWebhook)localStorage.setItem('amc_cal',calWebhook); } catch(e) {}
+  activeCuKey = cuKey; activeNotionToken = notionToken || '';
+  showScreen('loading');
+  try {
+    setStep('no'); setLoad('Reading your priorities…', 'Fetching Notion page');
+    let priorityItems = []; usingNotion = false;
+    if (hasNotion) {
+      try { priorityItems = await fetchNotionPage(notionToken, notionPageId); lastNotionItems = priorityItems; usingNotion = true; }
+      catch(e) { if (hasManual) { priorityItems = manualList.split('\n').map(s=>s.trim()).filter(Boolean); } else throw e; }
+    } else { priorityItems = manualList.split('\n').map(s=>s.trim()).filter(Boolean); }
+
+    let calEvents = [];
+    setStep('ca');
+    if (calWebhook) {
+      setLoad('Fetching family calendar…', 'Checking today and tomorrow');
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const calRes = await fetch(`${calWebhook}?date=${today}`);
+        if (calRes.ok) { const calData = await calRes.json(); calEvents = Array.isArray(calData) ? calData : (calData.events || []); }
+      } catch(e) { console.warn('Calendar fetch failed silently:', e); }
+    }
+
+    setStep('cu'); setLoad('Connecting to ClickUp…', 'Getting your workspace');
+    const me = await cuFetch('/user', cuKey), uid = me.user.id;
+    const teams = await cuFetch('/team', cuKey), team = teams.teams[0], tid = team.id;
+    setLoad('Fetching tasks…', 'Workspace: ' + team.name);
+    const tasksRes = await cuFetch(`/team/${tid}/task?assignee[]=${uid}&include_closed=false&subtasks=true&order_by=updated&reverse=true&page=0`, cuKey);
+    const IGNORED_LISTS = ['youth enrichment franchises','tools & vendors','explore'];
+    const IGNORED_STATUSES = ['complete','completed','scheduled','done','closed'];
+    const tasks = (tasksRes.tasks||[]).filter(t => {
+      const listName=(t.list?.name||'').toLowerCase().trim(), spaceName=(t.space?.name||'').toLowerCase().trim();
+      const taskStatus=(t.status?.status||'').toLowerCase().trim();
+      if (IGNORED_STATUSES.includes(taskStatus)) return false;
+      return !(IGNORED_LISTS.includes(listName) && spaceName==='ameliorate');
+    });
+    const now = Date.now(), SEVEN = 7*24*60*60*1000;
+    const todayMid = new Date(); todayMid.setHours(0,0,0,0);
+    const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
+    const overdue=[], dueToday=[], upcoming=[], stale=[];
+    tasks.forEach(t => {
+      const due = t.due_date ? parseInt(t.due_date) : null;
+      const updated = t.date_updated ? parseInt(t.date_updated) : 0;
+      const info = { cuId:t.id, name:t.name, list:t.list?.name||'', folder:t.folder?.name||'', status:t.status?.status||'', due, updated };
+      if (due) { if(due<todayMid.getTime())overdue.push(info); else if(due<=todayEnd.getTime())dueToday.push(info); else upcoming.push(info); }
+      else if (updated < now - SEVEN) stale.push(info);
+      else upcoming.push(info);
+    });
+    cuTaskIdMap = {};
+    tasks.forEach(t => { const key=(t.name||'').toLowerCase().trim()+'|||'+(t.list?.name||'').toLowerCase().trim(); cuTaskIdMap[key]=t.id; });
+    const listMap = {};
+    tasks.forEach(t => { const ln=t.list?.name; if(!ln)return; const u=parseInt(t.date_updated||0); if(!listMap[ln]||u>listMap[ln])listMap[ln]=u; });
+    const staleLists = Object.entries(listMap).filter(([,u])=>u<now-SEVEN).map(([n])=>n);
+
+    setLoad('Scanning pending clients…','Checking list statuses');
+    let pendingLists = [];
+    try {
+      const spacesRes = await cuFetch(`/team/${tid}/space?archived=false`, cuKey);
+      for (const space of (spacesRes.spaces||[])) {
+        try {
+          const listsRes = await cuFetch(`/space/${space.id}/list?archived=false`, cuKey);
+          (listsRes.lists||[]).forEach(l => { if((l.status?.status||'').toLowerCase().includes('pending')) pendingLists.push({name:l.name,space:space.name,tasks:l.task_count||0}); });
+        } catch(e) {}
+      }
+    } catch(e) { console.warn('Pending scan skipped:',e); }
+
+    setStep('ai'); setLoad('Building your day…','Claude is reading everything');
+    const plan = await buildPlan({priorityItems,overdue,dueToday,upcoming:upcoming.slice(0,12),stale:stale.slice(0,8),staleLists,calEvents,pendingLists}, anthKey);
+    setStep('rd'); setLoad('Almost there…','Assembling your briefing');
+    renderDash(plan, usingNotion, priorityItems.length, calEvents);
+    setTimeout(() => showScreen('dashboard'), 350);
+  } catch(err) { console.error(err); showScreen('setup'); showErr(err.message || 'Something went wrong — check your API keys.'); }
+}
+
+async function buildPlan(data, anthKey) {
+  const prompt = `You are a morning briefing assistant for Amy, who runs Ameliorate (a boutique marketing automation agency). Amy has ADHD and needs extremely clear daily structure. Be direct, not fluffy.
+
+Her current priority list (${data.priorityItems.length} items):
+${data.priorityItems.map((x,i)=>`${i+1}. ${x}`).join('\n')}
+
+Today's family calendar events:
+${data.calEvents&&data.calEvents.length?data.calEvents.map(e=>`- ${e.time?e.time+' ':''}${e.name}`).join('\n'):'None pulled yet (calendar not connected)'}
+
+ClickUp tasks (cuId = ClickUp task ID, include it in your response):
+OVERDUE: ${JSON.stringify(data.overdue.map(t=>({cuId:t.cuId,name:t.name,list:t.list})))}
+DUE TODAY: ${JSON.stringify(data.dueToday.map(t=>({cuId:t.cuId,name:t.name,list:t.list})))}
+UPCOMING: ${JSON.stringify(data.upcoming.map(t=>({cuId:t.cuId,name:t.name,list:t.list,status:t.status})))}
+STALE (no update 7+ days): ${JSON.stringify(data.stale.map(t=>({cuId:t.cuId,name:t.name,list:t.list})))}
+LISTS with no activity 7+ days: ${JSON.stringify(data.staleLists)}
+PENDING client lists: ${data.pendingLists&&data.pendingLists.length?JSON.stringify(data.pendingLists):'None found'}
+
+Return ONLY valid JSON — no markdown, no preamble:
+{
+  "greeting": "short energizing phrase max 8 words, no emojis, no exclamation marks",
+  "focusBlock": "one concrete sentence about deep work focus for today",
+  "insight": "one specific observation about workload or pattern, max 18 words, actionable",
+  "schedule": [
+    { "startTime": "08:00", "endTime": "10:00", "type": "deep", "label": "Top priority task name", "note": null }
+  ],
+  "startHere": [
+    { "id": "s1", "text": "clear action item", "why": "brief reason max 8 words", "source": "Notion | ClickUp", "list": "client or list name or empty", "cuId": null, "notionIdx": 0 }
+  ],
+  "getItDone": [
+    { "id": "g1", "text": "action item", "source": "Notion | ClickUp", "list": "client or list name", "cuId": null, "notionIdx": null }
+  ],
+  "thisWeek": [
+    { "id": "w1", "text": "action item", "source": "Notion | ClickUp", "list": "client or list name", "cuId": null, "notionIdx": null }
+  ],
+  "watchLists": [
+    { "name": "list or client name", "reason": "why it needs attention, max 10 words" }
+  ]
+}
+
+Rules:
+- schedule: 8am-8pm, 24hr time. Types: deep (teal), admin (seafoam), break (gray), event (purple), flex (buffer). Calendar events = type event at exact times. Amy: noon workout Mon, 8am Tue/Thu, 6am Fri. Walking pad midday. 4-7 blocks, longer uninterrupted for ADHD.
+- startHere: exactly 3 items — highest urgency
+- getItDone: 4-6 items for a realistic workday
+- thisWeek: 3-5 items not today-critical
+- watchLists: stale + PENDING lists, max 5, omit if none
+- notionIdx: 0-based index from priority list above, null if not Notion
+- cuId: clickup task id, null if not ClickUp
+- NEVER surface: Youth Enrichment Franchises, Tools & Vendors, Explore lists
+- No filler, no congratulations`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': anthKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2000, system: "You are a JSON API. Return only valid parseable JSON. Escape internal double quotes as \\\". Never truncate. Always complete the full JSON response.", messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!res.ok) { const t = await res.text(); throw new Error('Claude API error ' + res.status + ': ' + t.slice(0,120)); }
+  const d = await res.json();
+  const raw = d.content.map(b=>b.text||'').join('');
+  const clean = raw.replace(/```json|```/g,'').trim();
+  try { return JSON.parse(clean); } catch {
+    const sanitized = clean.replace(/[\x00-\x1F\x7F]/g, c=>c==='\n'||c==='\r'||c==='\t'?c:'');
+    try { return JSON.parse(sanitized); } catch {}
+    const m = sanitized.match(/\{[\s\S]*\}/);
+    if (m) { try { return JSON.parse(m[0]); } catch(e2) { throw new Error('Could not parse AI response: ' + e2.message); } }
+    throw new Error('Could not parse AI response');
+  }
+}
+
+function taskCard(item) {
+  const id = item.id || Math.random().toString(36).slice(2);
+  const isCU = item.source&&item.source.toLowerCase().includes('clickup');
+  const isNotion = item.source&&item.source.toLowerCase().includes('notion');
+  const tagClass = isCU?'tag-cu':isNotion?'tag-notion':'tag-pr';
+  let notionBlockId = '';
+  if (item.notionIdx!==null&&item.notionIdx!==undefined&&lastNotionItems[item.notionIdx]) {
+    notionBlockId = notionBlockMap[lastNotionItems[item.notionIdx].toLowerCase().trim()]||'';
+  } else if (isNotion&&item.text) { notionBlockId = notionBlockMap[item.text.toLowerCase().trim()]||''; }
+  const cuId = item.cuId||'';
+  return `<div class="task-card" data-id="${id}" data-cu-id="${esc(cuId)}" data-notion-id="${esc(notionBlockId)}" onclick="toggle('${id}')">
+    <div class="cb"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 5.5L4.5 8.5L9.5 2.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-body">
+      <div class="task-text">${esc(item.text)}</div>
+      <div class="task-meta">
+        <span class="tag ${tagClass}">${esc(item.source||'Priority')}</span>
+        ${item.list?`<span class="tag tag-client">${esc(item.list)}</span>`:''}
+        ${item.why?`<span class="tag-why">${esc(item.why)}</span>`:''}
+        <span class="sync-badge" id="sync-${id}"></span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function setSyncBadge(id, state) {
+  const b = $('sync-'+id); if(!b) return;
+  b.className='sync-badge '+state;
+  b.textContent=state==='syncing'?'↻ syncing…':state==='synced'?'✓ synced':'✗ failed';
+}
+
+async function toggle(id) {
+  const el = document.querySelector(`[data-id="${id}"]`); if(!el) return;
+  const isNowDone = !checked[id]; checked[id]=isNowDone; el.classList.toggle('done',isNowDone);
+  if (!isNowDone) return;
+  const cuId=el.dataset.cuId, notionId=el.dataset.notionId;
+  if (cuId&&activeCuKey) {
+    setSyncBadge(id,'syncing');
+    try { const r=await fetch(`https://api.clickup.com/api/v2/task/${cuId}`,{method:'PUT',headers:{'Authorization':activeCuKey,'Content-Type':'application/json'},body:JSON.stringify({status:'complete'})}); setSyncBadge(id,r.ok?'synced':'failed'); }
+    catch(e) { setSyncBadge(id,'failed'); }
+  }
+  if (notionId&&activeNotionToken) {
+    setSyncBadge(id,'syncing');
+    try { const r=await fetch(`/.netlify/functions/notion-proxy?blockId=${encodeURIComponent(notionId)}&token=${encodeURIComponent(activeNotionToken)}&action=delete`,{headers:{'Content-Type':'application/json'}}); setSyncBadge(id,r.ok?'synced':'failed'); }
+    catch(e) { setSyncBadge(id,'failed'); }
+  }
+}
+
+function showBar(id) { $(id).classList.add('visible'); }
+function showSec(id) { $(id).classList.add('visible'); }
+
+function renderDash(p, fromNotion, notionCount, calEvents) {
+  checked = {};
+  const today = new Date();
+  $('dash-date').textContent = today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  $('dash-greeting').textContent = p.greeting||'Good morning.';
+  const syncEl=$('sync-info');
+  if (fromNotion) syncEl.innerHTML=`<span class="sync-notion">Notion</span> — ${notionCount} item${notionCount!==1?'s':''} synced · ${today.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}`;
+  else syncEl.textContent=`Manual list · ${today.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}`;
+
+  let schedule = p.schedule||[];
+  if (calEvents&&calEvents.length) {
+    calEvents.forEach(ev => {
+      if(!ev.time24||ev.allDay) return;
+      const alreadyIn=schedule.some(s=>s.type==='event'&&s.label&&ev.name&&s.label.toLowerCase().includes(ev.name.toLowerCase().slice(0,8)));
+      if (!alreadyIn) { const [h,m]=ev.time24.split(':').map(Number); const endH=h+1; schedule.push({startTime:ev.time24,endTime:`${String(endH).padStart(2,'0')}:${String(m).padStart(2,'0')}`,type:'event',label:ev.name,note:null}); }
+    });
+    schedule.sort((a,b)=>a.startTime.localeCompare(b.startTime));
+  }
+  const typeLabels={deep:'Deep Work',admin:'Admin',break:'Break',event:'Calendar',flex:'Flex'};
+  const dayPlan=$('day-plan'), tblockList=$('tblock-list');
+  if (schedule.length) {
+    tblockList.innerHTML=schedule.map(b=>{
+      const fmt=t=>{if(!t)return'';const[h,m]=t.split(':').map(Number);return`${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`};
+      return `<div class="tblock type-${b.type||'flex'}">
+        <div class="tblock-time"><span>${fmt(b.startTime)}</span><span class="tend">${fmt(b.endTime)}</span></div>
+        <div class="tblock-bar"></div>
+        <div class="tblock-body"><span class="tblock-chip">${esc(typeLabels[b.type]||b.type||'Block')}</span><div class="tblock-task">${esc(b.label||'')}</div>${b.note?`<div class="tblock-note">${esc(b.note)}</div>`:''}</div>
+      </div>`;
+    }).join('');
+    dayPlan.classList.add('visible');
+  }
+  const calStrip=$('cal-strip'),calEl=$('cal-events');
+  if (!schedule.length&&calEvents&&calEvents.length) { calEl.innerHTML=calEvents.map(e=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;"><strong>${esc(e.time||'All Day')}</strong> — ${esc(e.name)}</div>`).join(''); calStrip.classList.add('visible'); }
+
+  ['bar-insight','bar-focus'].forEach(id=>$(id).classList.remove('visible'));
+  ['sec-start','sec-today','sec-week','sec-watch'].forEach(id=>$(id).classList.remove('visible'));
+  if(p.insight){$('insight-text').textContent=p.insight;showBar('bar-insight');}
+  if(p.focusBlock){$('focus-text').textContent=p.focusBlock;showBar('bar-focus');}
+  if(p.startHere?.length){$('cnt-start').textContent=p.startHere.length;$('list-start').innerHTML=p.startHere.map(taskCard).join('');showSec('sec-start');}
+  if(p.getItDone?.length){$('cnt-today').textContent=p.getItDone.length;$('list-today').innerHTML=p.getItDone.map(taskCard).join('');showSec('sec-today');}
+  if(p.thisWeek?.length){$('cnt-week').textContent=p.thisWeek.length;$('list-week').innerHTML=p.thisWeek.map(taskCard).join('');showSec('sec-week');}
+  if(p.watchLists?.length){$('list-watch').innerHTML=p.watchLists.map(w=>`<div class="watch-card"><div class="watch-pip"></div><div><div class="watch-name">${esc(w.name)}</div><div class="watch-why">${esc(w.reason)}</div></div></div>`).join('');showSec('sec-watch');}
+}
+
+function resetToSetup() { checked={}; showScreen('setup'); }
+
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    const cu=localStorage.getItem('amc_cu'),anth=localStorage.getItem('amc_anth');
+    const nt=localStorage.getItem('amc_nt'),np=localStorage.getItem('amc_np'),cal=localStorage.getItem('amc_cal');
+    if(cu)$('cuKey').value=cu; if(anth)$('anthKey').value=anth; if(nt)$('notionToken').value=nt; if(np)$('notionPage').value=np; if(cal)$('calWebhook').value=cal;
+    if(nt&&np){$('notion-status').className='notion-status ok';$('notion-status-text').textContent='Saved — click Test Connection to verify';}
+  } catch(e) {}
+});
+</script>
 </body>
 </html>
